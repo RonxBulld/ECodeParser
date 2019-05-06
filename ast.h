@@ -85,7 +85,7 @@ using ASTNodePtr = std::shared_ptr<ASTNode>;
 AST_NODE(List) {
     AST_DECL();
     std::vector<ASTNodePtr> args;
-    inline void AddArg(ASTNodePtr &&node) {
+    inline void AddArg(ASTNodePtr node) {
         args.push_back(node);
     }
 };

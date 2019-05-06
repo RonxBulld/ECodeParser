@@ -375,13 +375,9 @@ public:
     ASTIfStmtPtr ParseIfTrue(FileBuffer &buf) {
         ASTIfStmtPtr ifstmt = make_ptr(ASTIfStmt);
         ASTFunCallPtr ptr = ParseFunCall(buf);
-        ifstmt->condition = ptr;
-
-/*
         if (!ptr->args->args.empty()) {
             ifstmt->condition = ptr->args->args[0];
         }
-*/
         ifstmt->then_block = make_ptr(ASTList);
         uint8_t next;
         do {
@@ -447,9 +443,7 @@ public:
 
     ASTFunCallPtr ParseFunCall(FileBuffer &buf) {
         ASTFunCallPtr ptr = make_ptr(ASTFunCall);
-        ptr->key.index = buf.ReadShort();
-        ptr->key.code = buf.ReadByte();
-        ptr->key.type = (KeyType) buf.ReadByte();
+        ptr->key.value = buf.ReadInt();
         ptr->lib = buf.ReadShort();
         ptr->unkown = buf.ReadShort();
         ptr->object = buf.ReadFixedData();
@@ -460,9 +454,6 @@ public:
 
     ASTNodePtr ParseNode(FileBuffer &buf, uint8_t type) {
         switch (type) {
-            case 6:
-                // 不知道是啥
-                return ParseNode(buf, buf.ReadByte());
             case 27:
                 // 自定义常量
                 return make_ptr(ASTConstant, buf.ReadInt());
@@ -489,6 +480,9 @@ public:
             case 35:
                 // 枚举常量
                 return make_ptr(ASTEnumConstant, buf.ReadInt(), buf.ReadInt());
+            case 54:
+                // 左小括号
+                return ParseNode(buf, buf.ReadByte());
             case 56:
                 // 对象开始
             {
@@ -524,6 +518,7 @@ public:
         uint8_t type;
         while ((type = buf.ReadByte()) != 1) {
             ast->AddArg(ParseNode(buf, type));
+
         }
         return ast;
     }
