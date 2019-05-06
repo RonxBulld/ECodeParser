@@ -16,10 +16,12 @@ struct DumpVisitor : Visitor {
     // 当前子程序
     Sub *current;
     ECode *code;
+    int indent{0};
     explicit DumpVisitor(ECode *code);
 
     void visit(ASTProgram *node) override;
-    void visit(ASTList *node) override;
+    void visit(ASTArgs *node) override;
+    void visit(ASTBlock *node) override;
     void visit(ASTFunCall *node) override;
     void visit(ASTIfStmt *node) override;
     void visit(ASTLiteral *node) override;
@@ -31,6 +33,10 @@ struct DumpVisitor : Visitor {
     void visit(ASTStructMember *node) override;
     void visit(ASTVariable *node) override;
     void visit(ASTDot *node) override;
+    void visit(ASTJudge *node) override;
+    void visit(ASTLoop *node) override;
+
+    void print_indent();
 
 };
 

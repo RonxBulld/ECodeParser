@@ -350,25 +350,25 @@ public:
         if (!ptr->args->args.empty()) {
             ifstmt->condition = ptr->args->args[0];
         }
-        ifstmt->then_block = make_ptr(ASTList);
+        ifstmt->then_block = make_ptr(ASTBlock);
         uint8_t next;
         do {
             next = buf.ReadByte();
             if (next == 80 || next == 81)
                 break;
-            ifstmt->then_block->AddArg(ParseLineNode(buf, next));
+            ifstmt->then_block->AddStmt(ParseLineNode(buf, next));
         } while (buf.Good());
         if (next == 80) {
-            ifstmt->else_block = make_ptr(ASTList);
+            ifstmt->else_block = make_ptr(ASTBlock);
             do {
                 next = buf.ReadByte();
                 if (next == 81)
                     break;
-                ifstmt->else_block->AddArg(ParseLineNode(buf, next));
+                ifstmt->else_block->AddStmt(ParseLineNode(buf, next));
             } while (buf.Good());
 
         }
-        buf.Check(114);
+        buf.Match(114);
         return ifstmt;
     }
 
@@ -378,22 +378,22 @@ public:
         if (!ptr->args->args.empty()) {
             ifstmt->condition = ptr->args->args[0];
         }
-        ifstmt->then_block = make_ptr(ASTList);
+        ifstmt->then_block = make_ptr(ASTBlock);
         uint8_t next;
         do {
             next = buf.ReadByte();
             if (next == 82)
                 break;
-            ifstmt->then_block->AddArg(ParseLineNode(buf, next));
+            ifstmt->then_block->AddStmt(ParseLineNode(buf, next));
         } while (buf.Good());
-        buf.Check(115);
+        buf.Match(115);
         return ifstmt;
     }
 
     ASTJudgePtr ParseJudge(FileBuffer &buf) {
         ASTJudgePtr ast = make_ptr(ASTJudge);
         uint8_t next;
-        ASTListPtr block;
+        ASTBlockPtr block;
         do {
             next = buf.ReadByte();
             if (next == 110) {
@@ -401,10 +401,10 @@ public:
                 if (!ptr->args->args.empty()) {
                     ast->conditions.push_back(ptr->args->args[0]);
                 }
-                block = make_ptr(ASTList);
+                block = make_ptr(ASTBlock);
             } else if (next == 111) {
                 // 进入默认分支
-                ast->default_block = make_ptr(ASTList);
+                ast->default_block = make_ptr(ASTBlock);
                 block = ast->default_block;
             } else if (next == 83) {
                 // 分支结束
@@ -415,29 +415,29 @@ public:
             } else {
                 if (block == nullptr)
                     return ast;
-                block->args.push_back(ParseLineNode(buf, next));
+                block->AddStmt(ParseLineNode(buf, next));
             }
         } while (buf.Good());
 
-        buf.Check(116);
+        buf.Match(116);
         return ast;
     }
 
     ASTLoopPtr ParseLoop(FileBuffer &buf) {
         ASTLoopPtr ast = make_ptr(ASTLoop);
         ast->head = ParseFunCall(buf);
-        ast->block = make_ptr(ASTList);
+        ast->block = make_ptr(ASTBlock);
         uint8_t next;
         do {
             next = buf.ReadByte();
             if (next == 85)
                 break;
-            ast->block->args.push_back(ParseLineNode(buf, next));
+            ast->block->AddStmt(ParseLineNode(buf, next));
         } while (buf.Good());
-        if (buf.Check(85)) {
+        if (buf.Match(85)) {
             ast->tail = ParseFunCall(buf);
         }
-        buf.Check(113);
+        buf.Match(113);
         return nullptr;
     }
 
@@ -445,7 +445,7 @@ public:
         ASTFunCallPtr ptr = make_ptr(ASTFunCall);
         ptr->key.value = buf.ReadInt();
         ptr->lib = buf.ReadShort();
-        ptr->unkown = buf.ReadShort();
+        ptr->unknown = buf.ReadShort();
         ptr->object = buf.ReadFixedData();
         ptr->comment = buf.ReadFixedData();
         ptr->args = ParseArgs(buf);
@@ -512,14 +512,18 @@ public:
         return nullptr;
     }
 
-    ASTListPtr ParseArgs(FileBuffer &buf) {
-        ASTListPtr ast = make_ptr(ASTList);
-        buf.Check(54);
-        uint8_t type;
-        while ((type = buf.ReadByte()) != 1) {
-            ast->AddArg(ParseNode(buf, type));
+    ASTArgsPtr ParseArgs(FileBuffer &buf) {
+        ASTArgsPtr ast = make_ptr(ASTArgs);
+        buf.Match(54);
 
-        }
+        uint8_t type;
+        do {
+            type = buf.ReadByte();
+            if (type == 1 || type == 0) {
+                break;
+            }
+            ast->AddArg(ParseNode(buf, type));
+        } while (buf.Good());
         return ast;
     }
 

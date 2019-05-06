@@ -7,7 +7,7 @@
 using namespace std;
 
 int main() {
-    FileBuffer buffer("new.e");
+    FileBuffer buffer("code.e");
     ECodeParser parser(buffer);
     parser.Parse();
 

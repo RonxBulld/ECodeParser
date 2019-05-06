@@ -82,21 +82,29 @@ struct ASTNode {
 };
 using ASTNodePtr = std::shared_ptr<ASTNode>;
 
-AST_NODE(List) {
+AST_NODE(Args) {
     AST_DECL();
     std::vector<ASTNodePtr> args;
-    inline void AddArg(ASTNodePtr node) {
+    inline void AddArg(const ASTNodePtr &node) {
         args.push_back(node);
+    }
+};
+
+AST_NODE(Block) {
+    AST_DECL();
+    std::vector<ASTNodePtr> element;
+    inline void AddStmt(const ASTNodePtr &node) {
+        element.push_back(node);
     }
 };
 
 AST_NODE(FunCall) {
     Key key;
     short lib;
-    short unkown;
+    short unknown;
     FixedData object;
     FixedData comment;
-    ASTListPtr args;
+    ASTArgsPtr args;
     AST_DECL();
 };
 
@@ -111,8 +119,8 @@ AST_NODE(Program) {
 AST_NODE(IfStmt) {
     AST_DECL();
     ASTNodePtr condition;
-    ASTListPtr then_block;
-    ASTListPtr else_block;
+    ASTBlockPtr then_block;
+    ASTBlockPtr else_block;
 };
 
 AST_NODE(Literal) {
@@ -124,21 +132,22 @@ AST_NODE(Literal) {
 
 AST_NODE(Constant) {
     AST_DECL();
-    int key;
+    Key key;
 
     explicit ASTConstant(const int &key) : key(key) {}
 };
 
 AST_NODE(LibConstant) {
     AST_DECL();
-    int code;
+    short index;
+    short member;
 
-    explicit ASTLibConstant(int code) : code(code) {}
+    explicit ASTLibConstant(int code) : index((short) (code & 0xff - 1)), member((short) ((code >> 16) - 1)) {}
 };
 
 AST_NODE(Address) {
     AST_DECL();
-    int key;
+    Key key;
 
     explicit ASTAddress(const int &key) : key(key) {}
 };
@@ -182,13 +191,13 @@ AST_NODE(Judge) {
     AST_DECL();
     std::vector<ASTNodePtr> conditions;
     std::vector<ASTNodePtr>  blocks;
-    ASTListPtr default_block;
+    ASTBlockPtr default_block;
 };
 
 AST_NODE(Loop) {
     AST_DECL();
     ASTFunCallPtr head;
-    ASTListPtr block;
+    ASTBlockPtr block;
     ASTFunCallPtr tail;
 };
 

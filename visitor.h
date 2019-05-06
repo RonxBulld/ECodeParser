@@ -8,7 +8,8 @@
 struct ASTNode;
 struct ASTFunCall;
 struct ASTProgram;
-struct ASTList;
+struct ASTArgs;
+struct ASTBlock;
 struct ASTIfStmt;
 struct ASTLiteral;
 struct ASTConstant;
@@ -20,6 +21,7 @@ struct ASTStructMember;
 struct ASTVariable;
 struct ASTDot;
 struct ASTJudge;
+struct ASTLoop;
 
 struct Visitor {
     virtual void enter(ASTNode *node) {}
@@ -27,7 +29,8 @@ struct Visitor {
     virtual void visit(ASTNode *node) {};
     virtual void visit(ASTFunCall *node) {};
     virtual void visit(ASTProgram *node) {};
-    virtual void visit(ASTList *node) {};
+    virtual void visit(ASTArgs *node) {};
+    virtual void visit(ASTBlock *node) {};
     virtual void visit(ASTIfStmt *node) {};
     virtual void visit(ASTLiteral *node) {};
     virtual void visit(ASTConstant *node) {};
@@ -39,6 +42,7 @@ struct Visitor {
     virtual void visit(ASTVariable *node) {};
     virtual void visit(ASTDot *node) {};
     virtual void visit(ASTJudge *node) {};
+    virtual void visit(ASTLoop *node) {};
 
 };
 
