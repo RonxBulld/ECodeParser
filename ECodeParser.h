@@ -41,8 +41,8 @@ struct BasicInfo {
 };
 
 struct Window {
-    Key key{};
-    Key belong{};
+    Key key;
+    Key belong;
     FixedData name;
     FixedData comment;
     int left{};
@@ -87,7 +87,7 @@ struct LibConstant {
 
 
 struct Constant {
-    Key key{};
+    Key key;
     int property{};
     FixedData name;
     FixedData comment;
@@ -100,7 +100,7 @@ struct Constant {
 };
 
 struct Variable {
-    Key key{};
+    Key key;
     short type{};
     short property{};
     FixedData name;
@@ -170,6 +170,7 @@ struct DllFunc {
 };
 
 struct ECode {
+    uint8_t *code{};
     // 源码信息
     BasicInfo info;
     //窗口
@@ -197,6 +198,20 @@ struct ECode {
     DllFunc *dlls{};
     int dllNumber{};
 
+    void free() {
+        ::free(code);
+        for (int i = 0; i < libraryNumber; ++i) {
+            FreeLibrary(libraries[i].hModule);
+        }
+        delete[] windows;
+        delete[] constants;
+        delete[] libraries;
+        delete[] modules;
+        delete[] subs;
+        delete[] globals;
+        delete[] structs;
+        delete[] dlls;
+    }
 };
 
 static char seg_start[4] = {0x19, 0x73, 0x11, 0x15};
@@ -210,10 +225,13 @@ public:
     int _check{0};
     char *_eLibPath;
 
-    explicit ECodeParser(FileBuffer &buf) : _buffer(buf), _eLibPath(GetLibPath()) {}
+    explicit ECodeParser(FileBuffer &buf) : _buffer(buf), _eLibPath(GetLibPath()) {
+        code.code = buf.code;
+    }
 
     ~ECodeParser() {
         delete[]_eLibPath;
+
     }
 
     bool Check(const char *check, size_t length);;
@@ -223,6 +241,10 @@ public:
     void SetElibPath(char *path);
 
     void Parse();
+
+    ECode &GetECode() {
+        return code;
+    }
 
     bool CheckSegment(int num);
 
@@ -353,9 +375,13 @@ public:
     ASTIfStmtPtr ParseIfTrue(FileBuffer &buf) {
         ASTIfStmtPtr ifstmt = make_ptr(ASTIfStmt);
         ASTFunCallPtr ptr = ParseFunCall(buf);
+        ifstmt->condition = ptr;
+
+/*
         if (!ptr->args->args.empty()) {
             ifstmt->condition = ptr->args->args[0];
         }
+*/
         ifstmt->then_block = make_ptr(ASTList);
         uint8_t next;
         do {
@@ -434,6 +460,9 @@ public:
 
     ASTNodePtr ParseNode(FileBuffer &buf, uint8_t type) {
         switch (type) {
+            case 6:
+                // 不知道是啥
+                return ParseNode(buf, buf.ReadByte());
             case 27:
                 // 自定义常量
                 return make_ptr(ASTConstant, buf.ReadInt());

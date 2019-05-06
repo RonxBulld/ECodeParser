@@ -1,3 +1,9 @@
+#include <utility>
+
+#include <utility>
+
+#include <utility>
+
 //
 // Created by 曹顺 on 2019/5/5.
 //
@@ -13,41 +19,39 @@
 #define AST_DECL() void accept(Visitor *visitor) override {visitor->enter(this);visitor->visit(this);visitor->leave(this);}
 #define AST_NODE(ast) struct AST##ast;using AST##ast##Ptr = std::shared_ptr<AST##ast>;struct AST##ast : public ASTNode
 
-struct ASTNode {
-    ASTNode() = default;
-    virtual void accept(Visitor *visitor) {
-        visitor->visit(this);
-    };
-};
-using ASTNodePtr = std::shared_ptr<ASTNode>;
-
 enum KeyType : char {
-    Type_None = 0,
-    Type_Sub = 4,
-    Type_Global = 5,
-    Type_Program = 9,
-    Type_DllFunc = 10,
-    Type_ProgramVar = 21,
-    Type_Control = 22,
-    Type_Constant = 24,
-    Type_WindowProgram = 25,
-    Type_LocalVariable = 37,
-    Type_ImageRes = 40,
-    Type_DataStructureMember = 53,
-    Type_SoundRes = 56,
-    Type_DataStruct = 65,
-    Type_DllFunParam = 69,
-    Type_Module = 73,
-    Type_WindowRes = 82,
+    KeyType_None = 0,
+    KeyType_Sub = 4,
+    KeyType_Global = 5,
+    KeyType_Program = 9,
+    KeyType_DllFunc = 10,
+    KeyType_ProgramVar = 21,
+    KeyType_Control = 22,
+    KeyType_Constant = 24,
+    KeyType_WindowProgram = 25,
+    KeyType_LocalOrParam = 37,
+    KeyType_ImageRes = 40,
+    KeyType_DataStructureMember = 53,
+    KeyType_SoundRes = 56,
+    KeyType_DataStruct = 65,
+    KeyType_DllFunParam = 69,
+    KeyType_Module = 73,
+    KeyType_WindowRes = 82,
 };
 
 struct Key {
-    short index;
-    char code; // 不知道这个是干啥的
-    KeyType type;
-    inline int hash() {
-        return index | (code >> 16) | (type >> 24);
-    }
+    union {
+        struct {
+            short index;
+            char code; // 不知道这个是干啥的
+            KeyType type;
+        };
+        int value;
+    };
+
+    Key(int value) : value(value) {}
+    Key() : value(0) {}
+
 };
 
 struct Value {
@@ -62,11 +66,21 @@ struct Value {
     explicit Value() : type(0), val_int(0) {}
     explicit Value(int value) : type(1), val_int(0) {}
     explicit Value(bool value) : type(2), val_bool(value) {}
-    explicit Value(FixedData value) : type(3), val_string(value) {}
+    explicit Value(FixedData value) : type(3), val_string(value) {
+        val_string.length--;
+    }
     explicit Value(long long value) : type(4), val_time(value) {}
     explicit Value(double value) : type(5), val_double(value) {}
 
 };
+
+struct ASTNode {
+    ASTNode() = default;
+    virtual void accept(Visitor *visitor) {
+        visitor->visit(this);
+    };
+};
+using ASTNodePtr = std::shared_ptr<ASTNode>;
 
 AST_NODE(List) {
     AST_DECL();
@@ -89,7 +103,7 @@ AST_NODE(FunCall) {
 AST_NODE(Program) {
     AST_DECL();
     std::vector<ASTNodePtr> stmts;
-    inline void AddStmt(ASTNodePtr node) {
+    inline void AddStmt(const ASTNodePtr &node) {
         stmts.push_back(node);
     }
 };
@@ -104,31 +118,36 @@ AST_NODE(IfStmt) {
 AST_NODE(Literal) {
     AST_DECL();
     Value value;
-    ASTLiteral(const Value &value) : value(value) {}
+
+    explicit ASTLiteral(const Value &value) : value(value) {}
 };
 
 AST_NODE(Constant) {
     AST_DECL();
     int key;
-    ASTConstant(const int &key) : key(key) {}
+
+    explicit ASTConstant(const int &key) : key(key) {}
 };
 
 AST_NODE(LibConstant) {
     AST_DECL();
     int code;
-    ASTLibConstant(int code) : code(code) {}
+
+    explicit ASTLibConstant(int code) : code(code) {}
 };
 
 AST_NODE(Address) {
     AST_DECL();
     int key;
-    ASTAddress(const int &key) : key(key) {}
+
+    explicit ASTAddress(const int &key) : key(key) {}
 };
 
 AST_NODE(Subscript) {
     AST_DECL();
     ASTNodePtr value;
-    ASTSubscript(const ASTNodePtr &value) : value(value) {}
+
+    explicit ASTSubscript(ASTNodePtr value) : value(std::move(value)) {}
 };
 
 AST_NODE(EnumConstant) {
@@ -147,22 +166,23 @@ AST_NODE(StructMember) {
 
 AST_NODE(Variable) {
     AST_DECL();
-    int key;
-    ASTVariable(int key) : key(key) {}
+    Key key;
+
+    explicit ASTVariable(Key key) : key(key) {}
 };
 
 AST_NODE(Dot) {
     AST_DECL();
     ASTNodePtr var;
     ASTNodePtr field;
-    ASTDot(const ASTNodePtr &var, const ASTNodePtr &field) : var(var), field(field) {}
+    ASTDot(ASTNodePtr var, ASTNodePtr field) : var(std::move(var)), field(std::move(field)) {}
 };
 
 AST_NODE(Judge) {
     AST_DECL();
     std::vector<ASTNodePtr> conditions;
     std::vector<ASTNodePtr>  blocks;
-    ASTNodePtr default_block;
+    ASTListPtr default_block;
 };
 
 AST_NODE(Loop) {

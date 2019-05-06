@@ -288,7 +288,7 @@ void ECodeParser::ParseConstant() {
         code.constants[j].property = _buffer.ReadInt();
         code.constants[j].name = _buffer.ReadString();
         code.constants[j].comment = _buffer.ReadString();
-        if (code.constants[j].key.type == Type_ImageRes || code.constants[j].key.type == Type_SoundRes) {
+        if (code.constants[j].key.type == KeyType_ImageRes || code.constants[j].key.type == KeyType_SoundRes) {
             code.constants[j].data = _buffer.ReadFixedData();
         } else {
             uint8_t  type = _buffer.ReadByte();
