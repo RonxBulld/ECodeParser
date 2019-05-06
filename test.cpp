@@ -147,14 +147,24 @@ void DumpVisitor::visit(ASTVariable *node) {
         for (int i = 0; i < current->localNumber; ++i) {
             if (current->locals[i].key.value == node->key.value) {
                 cout << current->locals[i].name;
+                return;
             }
         }
         for (int i = 0; i < current->paramNumber; ++i) {
             if (current->params[i].key.value == node->key.value) {
                 cout << current->params[i].name;
+                return;
             }
         }
 
+    } else if (node->key.type == KeyType_ProgramVar) {
+        Module *module = current->module;
+        for (int i = 0; i < module->varNumber; ++i) {
+            if (module->vars[i].key.value == node->key.value) {
+                cout << module->vars[i].name;
+                return;
+            }
+        }
     }
 
 }

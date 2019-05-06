@@ -1,9 +1,3 @@
-#include <utility>
-
-#include <utility>
-
-#include <utility>
-
 //
 // Created by 曹顺 on 2019/5/5.
 //
@@ -65,7 +59,7 @@ struct Value {
         FixedData val_string;
     };
     explicit Value() : type(0), val_int(0) {}
-    explicit Value(int value) : type(1), val_int(0) {}
+    explicit Value(int value) : type(1), val_int(value) {}
     explicit Value(bool value) : type(2), val_bool(value) {}
     explicit Value(FixedData value) : type(3), val_string(value) {
         val_string.length--;

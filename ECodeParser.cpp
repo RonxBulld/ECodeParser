@@ -309,14 +309,13 @@ Variable *ECodeParser::ParseVariable(int &num) {
     _buffer.Skip(num * 4);
     for (int i = 0; i < num; ++i) {
         size_t next_offset = _buffer.ReadInt() + _buffer.pos;
-        var[i].type = _buffer.ReadShort();
+        var[i].type = _buffer.ReadInt();
         var[i].property = _buffer.ReadShort();
         var[i].count = _buffer.ReadByte();
         var[i].dimension = var[i].count ? new int[var[i].count] : nullptr;
         for (int j = 0; j < var[i].count; ++j) {
             var[i].dimension[j] = _buffer.ReadInt();
         }
-        _buffer.Skip(2);
         var[i].name = _buffer.ReadString();
         var[i].comment = _buffer.ReadString();
         _buffer.pos = next_offset;
@@ -330,6 +329,12 @@ void ECodeParser::ParseSub() {
     code.subs = new Sub[code.subNumber];
     for (int i = 0; i < code.subNumber; ++i) {
         code.subs[i].key = ParseKey();
+        for (int j = 0; j < code.moduleNumber; ++j) {
+            if (code.modules[j].has(code.subs[i].key)) {
+                code.subs[i].module = &code.modules[j];
+                break;
+            }
+        }
     }
     _buffer.Skip(code.subNumber * 4);
     for (int j = 0; j < code.subNumber; ++j) {

@@ -1,5 +1,5 @@
 //
-// Created by ??? on 2019/5/3.
+// Created by ≤‹À≥ on 2019/5/3.
 //
 
 #ifndef PARSE_E_FILE_ECODEPARSER_H
@@ -85,7 +85,6 @@ struct LibConstant {
     int index; // constant index
 };
 
-
 struct Constant {
     Key key;
     short property{};
@@ -101,12 +100,15 @@ struct Constant {
 
 struct Variable {
     Key key;
-    short type{};
+    int type{};
     short property{};
     FixedData name;
     FixedData comment;
     int *dimension{};
     int count{};
+    void free() {
+        delete[]dimension;
+    }
 };
 
 struct Library {
@@ -116,8 +118,8 @@ struct Library {
 };
 
 struct Module {
-    Key key{};
-    Key base{};
+    Key key;
+    Key base;
     FixedData name;
     FixedData comment;
     int property{};
@@ -126,6 +128,23 @@ struct Module {
 
     Variable *vars{};
     int varNumber{};
+
+    inline bool has(Key test) {
+        for (int i = 0; i < number; ++i) {
+            if (test.value == include[i].value) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    void free() {
+        for (int i = 0; i < varNumber; ++i) {
+            vars[i].free();
+        }
+        delete[]include;
+        delete[]vars;
+    }
 };
 
 struct Sub {
@@ -143,7 +162,20 @@ struct Sub {
     Variable *locals{};
     int localNumber{};
 
+    // À˘ Ùƒ£øÈ
+    Module *module;
+
     ASTProgramPtr ast;
+    void free() {
+        for (int i = 0; i < paramNumber; ++i) {
+            params[i].free();
+        }
+        for (int i = 0; i < localNumber; ++i) {
+            locals[i].free();
+        }
+        delete[]params;
+        delete[]locals;
+    }
 };
 
 struct DataStruct {
@@ -153,6 +185,12 @@ struct DataStruct {
     FixedData comment;
     Variable *members{};
     int memberNumber{};
+    void free() {
+        for (int i = 0; i < memberNumber; ++i) {
+            members[i].free();
+        }
+        delete[]members;
+    }
 
 };
 
@@ -166,6 +204,12 @@ struct DllFunc {
     FixedData func;
     Variable *params{};
     int paramNumber{};
+    void free() {
+        for (int i = 0; i < paramNumber; ++i) {
+            params[i].free();
+        }
+        delete[]params;
+    }
 
 };
 
@@ -202,6 +246,18 @@ struct ECode {
         ::free(code);
         for (int i = 0; i < libraryNumber; ++i) {
             FreeLibrary(libraries[i].hModule);
+        }
+        for (int i = 0; i < moduleNumber; ++i) {
+            modules[i].free();
+        }
+        for (int i = 0; i < subNumber; ++i) {
+            subs[i].free();
+        }
+        for (int i = 0; i < globalNumber; ++i) {
+            globals[i].free();
+        }
+        for (int i = 0; i < structNumber; ++i) {
+            structs[i].free();
         }
         delete[] windows;
         delete[] constants;
