@@ -47,6 +47,7 @@ struct Key {
             KeyType type;
         };
         int value;
+        char part[4];
     };
 
     Key(int value) : value(value) {}

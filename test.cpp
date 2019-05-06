@@ -49,10 +49,19 @@ void DumpVisitor::visit(ASTFunCall *node) {
     }
     if (node->lib >= 0) {
         cout << code->libraries[node->lib].info->m_pBeginCmdInfo[node->key.value].m_szName;
-    } else {
+        node->args->accept(this);
+        return;
+    }
+    if (node->key.type == KeyType_Sub) {
         for (int i = 0; i < code->subNumber; ++i) {
             if (code->subs[i].key.value == node->key.value) {
                 cout << code->subs[i].name;
+            }
+        }
+    } else if (node->key.type == KeyType_DllFunc) {
+        for (int i = 0; i < code->dllNumber; ++i) {
+            if (code->dlls[i].key.index == node->key.index) {
+                cout << code->dlls[i].name;
             }
         }
     }
@@ -65,9 +74,7 @@ void DumpVisitor::visit(ASTIfStmt *node) {
     cout << "if (";
     node->condition->accept(this);
     cout << ")" << endl;
-    indent += 4;
     node->then_block->accept(this);
-    indent -= 4;
 
     if (node->else_block != nullptr) {
         print_indent();
@@ -161,20 +168,27 @@ void DumpVisitor::visit(ASTDot *node) {
 void DumpVisitor::visit(ASTJudge *node) {
     for (int i = 0; i < node->conditions.size(); ++i) {
         print_indent();
-        cout << "判断 (";
+        cout << "case ";
         node->conditions[i]->accept(this);
-        cout << ")" << endl;
+        cout << " : " << endl;
         node->blocks[i]->accept(this);
     }
     if (node->default_block != nullptr) {
         print_indent();
-        cout << "否则" << endl;
+        cout << "default : " << endl;
         node->default_block->accept(this);
     }
 }
 
 void DumpVisitor::visit(ASTLoop *node) {
-
+    print_indent();
+    node->head->accept(this);
+    cout << endl;
+    node->block->accept(this);
+    if (node->tail != nullptr) {
+        print_indent();
+        node->tail->accept(this);
+    }
 }
 
 void DumpVisitor::print_indent() {

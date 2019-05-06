@@ -74,7 +74,7 @@ public:
     inline FixedData ReadString() {
         int length = strlen((char *) &code[pos]);
         FixedData data((char *) &code[pos], length);
-        pos += data.length;
+        pos += length + 1;
         return data;
     }
 

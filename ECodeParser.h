@@ -17,7 +17,7 @@
 #include "ast.h"
 #include "lib2.h"
 #include "test.h"
-#define NOT_REACHED() (void(0))
+#define NOT_REACHED() printf("not reached !! %s:%d\n", __FILE__, __LINE__);
 #define make_ptr(p, ...) std::make_shared<p>(__VA_ARGS__)
 using namespace std;
 
@@ -88,7 +88,7 @@ struct LibConstant {
 
 struct Constant {
     Key key;
-    int property{};
+    short property{};
     FixedData name;
     FixedData comment;
 
@@ -340,7 +340,6 @@ public:
             default:
                 break;
         }
-        NOT_REACHED();
         return nullptr;
     }
 
@@ -403,6 +402,7 @@ public:
                 }
                 block = make_ptr(ASTBlock);
             } else if (next == 111) {
+                ast->blocks.push_back(block);
                 // 进入默认分支
                 ast->default_block = make_ptr(ASTBlock);
                 block = ast->default_block;
@@ -434,11 +434,10 @@ public:
                 break;
             ast->block->AddStmt(ParseLineNode(buf, next));
         } while (buf.Good());
-        if (buf.Match(85)) {
+        if (buf.Match(113)) {
             ast->tail = ParseFunCall(buf);
         }
-        buf.Match(113);
-        return nullptr;
+        return ast;
     }
 
     ASTFunCallPtr ParseFunCall(FileBuffer &buf) {
@@ -468,11 +467,11 @@ public:
                 return make_ptr(ASTAddress, buf.ReadInt());
             case 31:
                 // 左大括号
-
+                NOT_REACHED();
                 break;
             case 32:
                 // 右大括号
-
+                NOT_REACHED();
                 break;
             case 33:
                 // 函数
@@ -509,6 +508,7 @@ public:
                 }
                 break;
         }
+        NOT_REACHED();
         return nullptr;
     }
 

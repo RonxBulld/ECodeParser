@@ -285,7 +285,7 @@ void ECodeParser::ParseConstant() {
     _buffer.Skip(code.constantNumber * 4);
     for (int j = 0; j < code.constantNumber; ++j) {
         _buffer.Skip(4);
-        code.constants[j].property = _buffer.ReadInt();
+        code.constants[j].property = _buffer.ReadShort();
         code.constants[j].name = _buffer.ReadString();
         code.constants[j].comment = _buffer.ReadString();
         if (code.constants[j].key.type == KeyType_ImageRes || code.constants[j].key.type == KeyType_SoundRes) {
