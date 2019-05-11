@@ -124,7 +124,7 @@ void ECodeParser::ParseLibrary() {
     Key key = ParseKey();
     _buffer.Skip(4);
     int num = code.libraryNumber = _buffer.ReadInt() >> 2;
-    code.libraries = new Library[num];
+    code.libraries = new ELibrary[num];
     _buffer.Skip(10 + num * 8);
     int length = strlen(_eLibPath);
     char buf[255] = {'\0'};
@@ -150,7 +150,7 @@ void ECodeParser::ParseModule() {
     _buffer.Skip(_buffer.ReadInt());
     _buffer.Skip(_buffer.ReadInt());
     int num = code.moduleNumber = _buffer.ReadInt() >> 3;
-    code.modules = new Module[num];
+    code.modules = new EModule[num];
     for (int i = 0; i < num; ++i) {
         code.modules[i].key = ParseKey();
     }
@@ -190,7 +190,7 @@ void ECodeParser::ParseInfoSegement(int arg) {
 
 void ECodeParser::ParseWindow() {
     code.windowNumber = _buffer.ReadInt() >> 3;
-    code.windows = new Window[code.windowNumber];
+    code.windows = new EWindow[code.windowNumber];
     for (int i = 0; i < code.windowNumber; ++i) {
         code.windows[i].key = ParseKey();
     }
@@ -277,7 +277,7 @@ void ECodeParser::ParseResourceSegement() {
 
 void ECodeParser::ParseConstant() {
     code.constantNumber = _buffer.ReadInt();
-    code.constants = (Constant *) malloc(code.constantNumber * sizeof(Constant));
+    code.constants = (EConst *) malloc(code.constantNumber * sizeof(EConst));
     _buffer.Skip(4);
     for (int i = 0; i < code.constantNumber; ++i) {
         code.constants[i].key = ParseKey();
@@ -299,10 +299,10 @@ void ECodeParser::ParseConstant() {
 
 }
 
-Variable *ECodeParser::ParseVariable(int &num) {
+EVar *ECodeParser::ParseVariable(int &num) {
     num = _buffer.ReadInt();
     size_t offset = _buffer.ReadInt() + _buffer.pos;
-    Variable *var = num ? new Variable[num] : nullptr;
+    EVar *var = num ? new EVar[num] : nullptr;
     for (int k = 0; k < num; ++k) {
         var[k].key = ParseKey();
     }
@@ -326,7 +326,7 @@ Variable *ECodeParser::ParseVariable(int &num) {
 
 void ECodeParser::ParseSub() {
     code.subNumber = _buffer.ReadInt() >> 3;
-    code.subs = new Sub[code.subNumber];
+    code.subs = new ESub[code.subNumber];
     for (int i = 0; i < code.subNumber; ++i) {
         code.subs[i].key = ParseKey();
         for (int j = 0; j < code.moduleNumber; ++j) {
@@ -354,7 +354,7 @@ void ECodeParser::ParseSub() {
 
 void ECodeParser::ParseDataStruct() {
     code.structNumber = _buffer.ReadInt() >> 3;
-    code.structs = new DataStruct[code.structNumber];
+    code.structs = new EStruct[code.structNumber];
     for (int i = 0; i < code.structNumber; ++i) {
         code.structs[i].key = ParseKey();
     }
@@ -371,7 +371,7 @@ void ECodeParser::ParseDataStruct() {
 
 void ECodeParser::ParseDll() {
     code.dllNumber = _buffer.ReadInt() >> 3;
-    code.dlls = new DllFunc[code.dllNumber];
+    code.dlls = new EDllSub[code.dllNumber];
     for (int i = 0; i < code.dllNumber; ++i) {
         code.dlls[i].key = ParseKey();
     }
@@ -393,4 +393,255 @@ void ECodeParser::ParseAST() {
         code.subs[i].ast = ParseSubCode(code_buf);
 
     }
+}
+
+Value ECodeParser::ParseValue(FileBuffer &buf, uint8_t type) {
+    switch (type) {
+        case 22:
+            // 空值
+            return Value();
+        case 23:
+        {
+            // double
+            FixedData data = buf.Read(8);
+            return Value(*((double *) data.data));
+        }
+        case 59:
+            return Value(buf.ReadInt());
+            // int
+        case 24:
+            // 逻辑
+            return Value(buf.ReadShort() != 0);
+        case 25:
+        {
+            // 日期时间
+            FixedData data = buf.Read(8);
+            return Value(*((long long *) data.data));
+        }
+        case 26:
+            // 文本
+            return Value(buf.ReadFixedData());
+        default:
+            return Value();
+    }
+}
+
+ASTProgramPtr ECodeParser::ParseSubCode(FileBuffer &buf) {
+    ASTProgramPtr ast = make_ptr(ASTProgram);
+    while (buf.Good()) {
+        ast->AddStmt(ParseLineNode(buf, buf.ReadByte()));
+    }
+    return ast;
+}
+
+ASTNodePtr ECodeParser::ParseLineNode(FileBuffer &buf, uint8_t type) {
+    switch (type) {
+        case 1:
+            return ParseLineNode(buf, buf.ReadByte());
+        case 106:
+            // 行
+            return ParseFunCall(buf);
+        case 107:
+            // 如果
+            return ParseIf(buf);
+        case 108:
+            // 如果真
+            return ParseIfTrue(buf);
+        case 109:
+            // 判断
+            return ParseJudge(buf);
+        case 112:
+            // 循环
+            return ParseLoop(buf);
+        default:
+            break;
+    }
+    return nullptr;
+}
+
+ASTIfStmtPtr ECodeParser::ParseIf(FileBuffer &buf) {
+    ASTIfStmtPtr ifstmt = make_ptr(ASTIfStmt);
+    ASTFunCallPtr ptr = ParseFunCall(buf);
+    if (!ptr->args->args.empty()) {
+        ifstmt->condition = ptr->args->args[0];
+    }
+    ifstmt->then_block = make_ptr(ASTBlock);
+    uint8_t next;
+    do {
+        next = buf.ReadByte();
+        if (next == 80 || next == 81)
+            break;
+        ifstmt->then_block->AddStmt(ParseLineNode(buf, next));
+    } while (buf.Good());
+    if (next == 80) {
+        ifstmt->else_block = make_ptr(ASTBlock);
+        do {
+            next = buf.ReadByte();
+            if (next == 81)
+                break;
+            ifstmt->else_block->AddStmt(ParseLineNode(buf, next));
+        } while (buf.Good());
+
+    }
+    buf.Match(114);
+    return ifstmt;
+}
+
+ASTIfStmtPtr ECodeParser::ParseIfTrue(FileBuffer &buf) {
+    ASTIfStmtPtr ifstmt = make_ptr(ASTIfStmt);
+    ASTFunCallPtr ptr = ParseFunCall(buf);
+    if (!ptr->args->args.empty()) {
+        ifstmt->condition = ptr->args->args[0];
+    }
+    ifstmt->then_block = make_ptr(ASTBlock);
+    uint8_t next;
+    do {
+        next = buf.ReadByte();
+        if (next == 82)
+            break;
+        ifstmt->then_block->AddStmt(ParseLineNode(buf, next));
+    } while (buf.Good());
+    buf.Match(115);
+    return ifstmt;
+}
+
+ASTJudgePtr ECodeParser::ParseJudge(FileBuffer &buf) {
+    ASTJudgePtr ast = make_ptr(ASTJudge);
+    uint8_t next;
+    ASTBlockPtr block;
+    do {
+        next = buf.ReadByte();
+        if (next == 110) {
+            ASTFunCallPtr ptr = ParseFunCall(buf);
+            if (!ptr->args->args.empty()) {
+                ast->conditions.push_back(ptr->args->args[0]);
+            }
+            block = make_ptr(ASTBlock);
+        } else if (next == 111) {
+            ast->blocks.push_back(block);
+            // 进入默认分支
+            ast->default_block = make_ptr(ASTBlock);
+            block = ast->default_block;
+        } else if (next == 83) {
+            // 分支结束
+            ast->blocks.push_back(block);
+        } else if (next == 84) {
+            // 判断结束
+            break;
+        } else {
+            if (block == nullptr)
+                return ast;
+            block->AddStmt(ParseLineNode(buf, next));
+        }
+    } while (buf.Good());
+
+    buf.Match(116);
+    return ast;
+}
+
+ASTLoopPtr ECodeParser::ParseLoop(FileBuffer &buf) {
+    ASTLoopPtr ast = make_ptr(ASTLoop);
+    ast->head = ParseFunCall(buf);
+    ast->block = make_ptr(ASTBlock);
+    uint8_t next;
+    do {
+        next = buf.ReadByte();
+        if (next == 85)
+            break;
+        ast->block->AddStmt(ParseLineNode(buf, next));
+    } while (buf.Good());
+    if (buf.Match(113)) {
+        ast->tail = ParseFunCall(buf);
+    }
+    return ast;
+}
+
+ASTFunCallPtr ECodeParser::ParseFunCall(FileBuffer &buf) {
+    ASTFunCallPtr ptr = make_ptr(ASTFunCall);
+    ptr->key.value = buf.ReadInt();
+    ptr->lib = buf.ReadShort();
+    ptr->unknown = buf.ReadShort();
+    ptr->object = buf.ReadFixedData();
+    ptr->comment = buf.ReadFixedData();
+    ptr->args = ParseArgs(buf);
+    return ptr;
+}
+
+ASTNodePtr ECodeParser::ParseNode(FileBuffer &buf, uint8_t type) {
+    switch (type) {
+        case 27:
+            // 自定义常量
+            return make_ptr(ASTConstant, buf.ReadInt());
+        case 28:
+            // 支持库常量
+            return make_ptr(ASTLibConstant, buf.ReadInt());
+        case 29:
+            // 变量
+            return ParseNode(buf, buf.ReadByte());
+        case 30:
+            // 子程序指针
+            return make_ptr(ASTAddress, buf.ReadInt());
+        case 31:
+            // 左大括号
+
+            return make_ptr(ASTBrace, ParseArgs(buf));
+
+            NOT_REACHED();
+            break;
+        case 32:
+            // 右大括号
+            NOT_REACHED();
+            break;
+        case 33:
+            // 函数
+            return ParseFunCall(buf);
+        case 35:
+            // 枚举常量
+            return make_ptr(ASTEnumConstant, buf.ReadInt(), buf.ReadInt());
+        case 54:
+            // 左小括号
+            return ParseNode(buf, buf.ReadByte());
+        case 56:
+            // 对象开始
+        {
+            int mark = buf.ReadInt();
+            if (mark == 0x500FFFE)
+                buf.ReadByte();
+
+            ASTNodePtr ast = make_ptr(ASTVariable, mark);
+            uint8_t next;
+            while ((next = buf.ReadByte()) != 55) {
+                ast = make_ptr(ASTDot, ast, ParseNode(buf, next));
+            }
+            return ast;
+        }
+        case 57:
+            // 数据成员
+            return make_ptr(ASTStructMember, buf.ReadInt(), buf.ReadInt());
+        case 58:
+            // 数组下标
+            return make_ptr(ASTSubscript, ParseNode(buf, buf.ReadByte()));
+        default:
+            if ((type >= 22 && type <= 26) || type == 59) {
+                return make_ptr(ASTLiteral, ParseValue(buf, type));
+            }
+            break;
+    }
+    NOT_REACHED();
+    return nullptr;
+}
+
+ASTArgsPtr ECodeParser::ParseArgs(FileBuffer &buf) {
+    ASTArgsPtr ast = make_ptr(ASTArgs);
+    buf.Match(54);
+
+    uint8_t type;
+    do {
+        type = buf.ReadByte();
+        if (type == 1 || type == 0 || type == 32) {
+            break;
+        }
+        ast->AddArg(ParseNode(buf, type));
+    } while (buf.Good());
+    return ast;
 }

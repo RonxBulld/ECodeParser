@@ -139,6 +139,17 @@ void DumpVisitor::visit(ASTEnumConstant *node) {
 }
 
 void DumpVisitor::visit(ASTStructMember *node) {
+    for (int i = 0; i < code->structNumber; ++i) {
+        if (code->structs[i].key.value == node->key.value) {
+            for (int j = 0; j < code->structs[i].memberNumber; ++j) {
+                if (code->structs[i].members[j].key.value == node->member.value) {
+                    cout << "." << code->structs[i].members[j].name;
+                    break;
+                }
+            }
+            break;
+        }
+    }
 
 }
 
@@ -158,7 +169,7 @@ void DumpVisitor::visit(ASTVariable *node) {
         }
 
     } else if (node->key.type == KeyType_ProgramVar) {
-        Module *module = current->module;
+        EModule *module = current->module;
         for (int i = 0; i < module->varNumber; ++i) {
             if (module->vars[i].key.value == node->key.value) {
                 cout << module->vars[i].name;
@@ -171,7 +182,6 @@ void DumpVisitor::visit(ASTVariable *node) {
 
 void DumpVisitor::visit(ASTDot *node) {
     node->var->accept(this);
-    cout << ".";
     node->field->accept(this);
 }
 
@@ -205,5 +215,12 @@ void DumpVisitor::print_indent() {
     for (int i = 0; i < indent; ++i) {
         cout << " ";
     }
+}
+
+void DumpVisitor::visit(ASTBrace *node) {
+    cout << "{" ;
+    node->args->accept(this);
+    cout << "}";
+
 }
 

@@ -10,11 +10,11 @@
 #include <iostream>
 #include <map>
 struct ECode;
-struct Sub;
+struct ESub;
 using namespace std;
 struct DumpVisitor : Visitor {
     // 当前子程序
-    Sub *current;
+    ESub *current;
     ECode *code;
     int indent{0};
     explicit DumpVisitor(ECode *code);
@@ -35,6 +35,8 @@ struct DumpVisitor : Visitor {
     void visit(ASTDot *node) override;
     void visit(ASTJudge *node) override;
     void visit(ASTLoop *node) override;
+
+    void visit(ASTBrace *node) override;
 
     void print_indent();
 

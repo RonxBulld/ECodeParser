@@ -22,6 +22,7 @@ struct ASTVariable;
 struct ASTDot;
 struct ASTJudge;
 struct ASTLoop;
+struct ASTBrace;
 
 struct Visitor {
     virtual void enter(ASTNode *node) {}
@@ -43,6 +44,7 @@ struct Visitor {
     virtual void visit(ASTDot *node) {};
     virtual void visit(ASTJudge *node) {};
     virtual void visit(ASTLoop *node) {};
+    virtual void visit(ASTBrace *node) {};
 
 };
 

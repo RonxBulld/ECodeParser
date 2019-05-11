@@ -1,3 +1,5 @@
+#include <utility>
+
 //
 // Created by 曹顺 on 2019/5/5.
 //
@@ -156,16 +158,16 @@ AST_NODE(Subscript) {
 
 AST_NODE(EnumConstant) {
     AST_DECL();
-    int key;
-    int index;
+    Key key;
+    Key index;
     ASTEnumConstant(int key, int index) : key(key), index(index) {}
 };
 
 AST_NODE(StructMember) {
     AST_DECL();
-    int member;
-    int key;
-    ASTStructMember(int member, int key) : member(member), key(key) {}
+    Key key;
+    Key member;
+    ASTStructMember(int key, int member) : member(member), key(key) {}
 };
 
 AST_NODE(Variable) {
@@ -194,6 +196,13 @@ AST_NODE(Loop) {
     ASTFunCallPtr head;
     ASTBlockPtr block;
     ASTFunCallPtr tail;
+};
+
+AST_NODE(Brace) {
+    AST_DECL();
+    ASTArgsPtr args;
+
+    ASTBrace(ASTArgsPtr args) : args(std::move(args)) {}
 };
 
 
