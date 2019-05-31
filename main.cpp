@@ -3,11 +3,12 @@
 #include <windows.h>
 #include "FileBuffer.h"
 #include "ECodeParser.h"
+#include <c_translator.h>
 #include "test.h"
 using namespace std;
 
 int main() {
-    FileBuffer buffer("new.e");
+    FileBuffer buffer("code.e");
     ECodeParser parser(buffer);
     parser.Parse();
 

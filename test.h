@@ -35,7 +35,10 @@ struct DumpVisitor : Visitor {
     void visit(ASTDot *node) override;
     void visit(ASTJudge *node) override;
     void visit(ASTLoop *node) override;
-
+    /**
+     * 花括号表达式{xxx, xx ,xxx}
+     * @param node
+     */
     void visit(ASTBrace *node) override;
 
     void print_indent();
