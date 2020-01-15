@@ -8,18 +8,16 @@
 using namespace std;
 
 int main() {
-    FileBuffer buffer("code.e");
+    FileBuffer buffer("C:\\Users\\Administrator\\Desktop\\ECodeParser\\code.e");
     ECodeParser parser(buffer);
     parser.Parse();
 
     DumpVisitor dv(&parser.code);
-
-    int num = parser.code.subNumber;
-    for (int i = 0; i < num; ++i) {
+    for (auto & sub : parser.code.subs) {
         cout << endl << endl;
-        cout << "sub : " << parser.code.subs[i].name << endl;
-        dv.current = &parser.code.subs[i];
-        parser.code.subs[i].ast->accept(&dv);
+        cout << "sub : " << sub.name << endl;
+        dv.current = &sub;
+        sub.ast->accept(&dv);
     }
 
     parser.code.free();

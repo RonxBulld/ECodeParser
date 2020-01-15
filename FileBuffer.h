@@ -6,14 +6,17 @@
 #define PARSE_E_FILE_FILEBUFFER_H
 
 #include <iostream>
+#include <fstream>
 #include <cstdio>
-#include <sys/stat.h>
 #include <cstdlib>
+#include <windows.h>
+
 struct FixedData {
     char *data{nullptr};
     int length{0};
     FixedData(char *data, int length) : data(data), length(length) {}
     FixedData() = default;
+
 };
 
 class FileBuffer {
@@ -22,6 +25,16 @@ public:
     size_t length{0};
     size_t pos{0};
     explicit FileBuffer(const char *file) {
+/*
+        HANDLE hFile = CreateFile(file, GENERIC_READ, 0, 0, OPEN_EXISTING, 0, 0);
+        length = GetFileSize(hFile, NULL);
+        code = (uint8_t *) malloc(length);
+        DWORD haveReadByte;
+        SetFilePointer(hFile, 10, NULL, FILE_BEGIN);
+        ReadFile(hFile, (LPVOID *) code, length, &haveReadByte, 0);
+        printf("have read %ld", length);
+        CloseHandle(hFile);
+*/
         FILE *f = fopen(file, "rb");
         struct stat st{};
         stat(file, &st);

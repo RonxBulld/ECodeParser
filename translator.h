@@ -21,25 +21,25 @@ public:
         if (key.type != KeyType_Constant) {
             return nullptr;
         }
-        for (int i = 0; i < code->constantNumber; ++i) {
-            if (code->constants[i].key.value == key.value) {
-                return &code->constants[i];
+        for (auto & constant : code->constants) {
+            if (constant.key.value == key.value) {
+                return &constant;
             }
         }
         return nullptr;
     }
     ESub *find_sub(Key key) {
-        for (int i = 0; i < code->subNumber; ++i) {
-            if (code->subs[i].key.value == key.value) {
-                return &code->subs[i];
+        for (auto & sub : code->subs) {
+            if (sub.key.value == key.value) {
+                return &sub;
             }
         }
         return nullptr;
     }
     EStruct *find_struct(Key key) {
-        for (int i = 0; i < code->structNumber; ++i) {
-            if (code->structs[i].key.value == key.value) {
-                return &code->structs[i];
+        for (auto & i : code->structs) {
+            if (i.key.value == key.value) {
+                return &i;
             }
         }
         return nullptr;
@@ -51,14 +51,14 @@ public:
      * @return
      */
     EVar *find_local(Key key) {
-        for (int i = 0; i < current->localNumber; ++i) {
-            if (current->locals[i].key.value == key.value) {
-                return &current->locals[i];
+        for (auto & local : current->locals) {
+            if (local.key.value == key.value) {
+                return &local;
             }
         }
-        for (int i = 0; i < current->paramNumber; ++i) {
-            if (current->params[i].key.value == key.value) {
-                return &current->params[i];
+        for (auto & param : current->params) {
+            if (param.key.value == key.value) {
+                return &param;
             }
         }
         return nullptr;
@@ -71,15 +71,15 @@ public:
      */
     EVar *find_program_var(Key key) {
         EModule *module = current->module;
-        for (int i = 0; i < module->varNumber; ++i) {
-            if (module->vars[i].key.value == key.value) {
-                return &module->vars[i];
+        for (auto & var : module->vars) {
+            if (var.key.value == key.value) {
+                return &var;
             }
         }
         return nullptr;
     }
     PLIB_CONST_INFO find_lib_const(int lib_index, int member_index) {
-        if (code->libraryNumber >= lib_index) {
+        if (code->libraries.size() >= lib_index) {
             return nullptr;
         }
         return &code->libraries[lib_index].info->m_pLibConst[member_index];

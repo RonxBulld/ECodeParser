@@ -115,7 +115,7 @@ void ECodeParser::ParseCodeSegement() {
     ParseLibrary();
     ParseModule();
     ParseSub();
-    code.globals = ParseVariable(code.globalNumber);
+    ParseVariable(code.globals);
     ParseDataStruct();
     ParseDll();
 }
@@ -123,24 +123,23 @@ void ECodeParser::ParseCodeSegement() {
 void ECodeParser::ParseLibrary() {
     Key key = ParseKey();
     _buffer.Skip(4);
-    int num = code.libraryNumber = _buffer.ReadInt() >> 2;
-    code.libraries = new ELibrary[num];
-    _buffer.Skip(10 + num * 8);
+    code.libraries.resize(_buffer.ReadInt() >> 2);
+    _buffer.Skip(10 + code.libraries.size() * 8);
     int length = strlen(_eLibPath);
     char buf[255] = {'\0'};
     strcpy(buf, _eLibPath);
-    for (int i = 0; i < num; ++i) {
-        code.libraries[i].path = _buffer.ReadFixedData();
-        char *data = code.libraries[i].path.data;
+    for (auto & librarie : code.libraries) {
+        librarie.path = _buffer.ReadFixedData();
+        char *data = librarie.path.data;
         int j = 0;
         do {
             buf[length + j++] = *data;
         } while (*++data != '\r');
         buf[length + j] = '\0';
         strcat(buf, ".fne");
-        code.libraries[i].hModule = LoadLibraryA(buf);
-        auto fn = (PFN_GET_LIB_INFO) GetProcAddress(code.libraries[i].hModule, FUNCNAME_GET_LIB_INFO);
-        code.libraries[i].info = fn();
+        librarie.hModule = LoadLibraryA(buf);
+        auto fn = (PFN_GET_LIB_INFO) GetProcAddress(librarie.hModule, FUNCNAME_GET_LIB_INFO);
+        librarie.info = fn();
     }
 
 }
@@ -149,24 +148,21 @@ void ECodeParser::ParseModule() {
     _buffer.Skip(8);
     _buffer.Skip(_buffer.ReadInt());
     _buffer.Skip(_buffer.ReadInt());
-    int num = code.moduleNumber = _buffer.ReadInt() >> 3;
-    code.modules = new EModule[num];
-    for (int i = 0; i < num; ++i) {
-        code.modules[i].key = ParseKey();
+    code.modules.resize(_buffer.ReadInt() >> 3);
+    for (auto & module : code.modules) {
+        module.key = ParseKey();
     }
-    _buffer.Skip(num * 4);
-    for (int j = 0; j < num; ++j) {
-        code.modules[j].property = _buffer.ReadInt();
-        code.modules[j].base = ParseKey();
-        code.modules[j].name = _buffer.ReadFixedData();
-        code.modules[j].comment = _buffer.ReadFixedData();
-        int value = _buffer.ReadInt();
-        int n = code.modules[j].number = value >> 2;
-        code.modules[j].include = new Key[n];
-        for (int i = 0; i < n; ++i) {
-            code.modules[j].include[i] = ParseKey();
+    _buffer.Skip(code.modules.size() * 4);
+    for (auto & module : code.modules) {
+        module.property = _buffer.ReadInt();
+        module.base = ParseKey();
+        module.name = _buffer.ReadFixedData();
+        module.comment = _buffer.ReadFixedData();
+        module.include.resize(_buffer.ReadInt() >> 2);
+        for (auto & include : module.include) {
+            include = ParseKey();
         }
-        code.modules[j].vars = ParseVariable(code.modules[j].varNumber);
+        ParseVariable(module.vars);
     }
 }
 
@@ -189,39 +185,38 @@ void ECodeParser::ParseInfoSegement(int arg) {
 }
 
 void ECodeParser::ParseWindow() {
-    code.windowNumber = _buffer.ReadInt() >> 3;
-    code.windows = new EWindow[code.windowNumber];
-    for (int i = 0; i < code.windowNumber; ++i) {
-        code.windows[i].key = ParseKey();
+    code.windows.resize(_buffer.ReadInt() >> 3);
+    for (auto & window : code.windows) {
+        window.key = ParseKey();
     }
-    _buffer.Skip(code.windowNumber << 2);
-    for (int j = 0; j < code.windowNumber; ++j) {
+    _buffer.Skip(code.windows.size() << 2);
+    for (auto & window : code.windows) {
         _buffer.Skip(4);
-        code.windows[j].belong = ParseKey();
-        code.windows[j].name = _buffer.ReadFixedData();
-        code.windows[j].comment = _buffer.ReadFixedData();
-        code.windows[j].number = _buffer.ReadInt();
+        window.belong = ParseKey();
+        window.name = _buffer.ReadFixedData();
+        window.comment = _buffer.ReadFixedData();
+        window.number = _buffer.ReadInt();
 
         // 下一个窗口的偏移
         int offset = _buffer.ReadInt();
         assert(offset > 0, "read windows error");
         offset += _buffer.pos;
 
-        _buffer.Skip(34 + (code.windows[j].number << 3));
+        _buffer.Skip(34 + (window.number << 3));
 
-        code.windows[j].left = _buffer.ReadInt();
-        code.windows[j].top = _buffer.ReadInt();
-        code.windows[j].height = _buffer.ReadInt();
-        code.windows[j].width = _buffer.ReadInt();
+        window.left = _buffer.ReadInt();
+        window.top = _buffer.ReadInt();
+        window.height = _buffer.ReadInt();
+        window.width = _buffer.ReadInt();
 
         _buffer.Skip(12);
-        code.windows[j].cursor = _buffer.ReadFixedData();
-        code.windows[j].mark = _buffer.ReadFixedData();
+        window.cursor = _buffer.ReadFixedData();
+        window.mark = _buffer.ReadFixedData();
 
         _buffer.Skip(4);
         int n = _buffer.ReadInt();
-        code.windows[j].visible = n & 1;
-        code.windows[j].bidden = n & 2;
+        window.visible = n & 1;
+        window.bidden = n & 2;
 
         _buffer.Skip(4);
 
@@ -235,36 +230,36 @@ void ECodeParser::ParseWindow() {
         _buffer.Skip(12);
         int property = _buffer.ReadInt();
         if (property > 0 && property <= 6) {
-            code.windows[j].border = _buffer.ReadInt();
-            code.windows[j].bgSize = _buffer.ReadInt();
-            code.windows[j].bgColor = _buffer.ReadInt();
-            code.windows[j].maxBtn = _buffer.ReadInt();
-            code.windows[j].minBtn = _buffer.ReadInt();
-            code.windows[j].ctrlBtn = _buffer.ReadInt();
-            code.windows[j].position = _buffer.ReadInt();
-            code.windows[j].movable = _buffer.ReadInt();
-            code.windows[j].musicTimes = _buffer.ReadInt();
-            code.windows[j].enterFocus = _buffer.ReadInt();
-            code.windows[j].escClose = _buffer.ReadInt();
-            code.windows[j].f1Help = _buffer.ReadInt();
-            code.windows[j].helpMark = _buffer.ReadInt();
-            code.windows[j].helpMark = _buffer.ReadInt();
-            code.windows[j].helpMark = _buffer.ReadInt();
-            code.windows[j].helpMark = _buffer.ReadInt();
-            code.windows[j].helpMark = _buffer.ReadInt();
-            code.windows[j].showInTaskbar = _buffer.ReadInt();
-            code.windows[j].mov = _buffer.ReadInt();
-            code.windows[j].shape= _buffer.ReadInt();
-            code.windows[j].alwaysTop= _buffer.ReadInt();
-            code.windows[j].alwaysActive= _buffer.ReadInt();
+            window.border = _buffer.ReadInt();
+            window.bgSize = _buffer.ReadInt();
+            window.bgColor = _buffer.ReadInt();
+            window.maxBtn = _buffer.ReadInt();
+            window.minBtn = _buffer.ReadInt();
+            window.ctrlBtn = _buffer.ReadInt();
+            window.position = _buffer.ReadInt();
+            window.movable = _buffer.ReadInt();
+            window.musicTimes = _buffer.ReadInt();
+            window.enterFocus = _buffer.ReadInt();
+            window.escClose = _buffer.ReadInt();
+            window.f1Help = _buffer.ReadInt();
+            window.helpMark = _buffer.ReadInt();
+            window.helpMark = _buffer.ReadInt();
+            window.helpMark = _buffer.ReadInt();
+            window.helpMark = _buffer.ReadInt();
+            window.helpMark = _buffer.ReadInt();
+            window.showInTaskbar = _buffer.ReadInt();
+            window.mov = _buffer.ReadInt();
+            window.shape= _buffer.ReadInt();
+            window.alwaysTop= _buffer.ReadInt();
+            window.alwaysActive= _buffer.ReadInt();
         }
         if (property == 6) {
-            code.windows[j].className = _buffer.ReadFixedData();
+            window.className = _buffer.ReadFixedData();
         }
         if (property >= 2) {
-            code.windows[j].title = _buffer.ReadFixedData();
+            window.title = _buffer.ReadFixedData();
         }
-        code.windows[j].helpFileName = _buffer.ReadFixedData();
+        window.helpFileName = _buffer.ReadFixedData();
         _buffer.pos = static_cast<size_t>(offset);
     }
 
@@ -276,122 +271,112 @@ void ECodeParser::ParseResourceSegement() {
 }
 
 void ECodeParser::ParseConstant() {
-    code.constantNumber = _buffer.ReadInt();
-    code.constants = (EConst *) malloc(code.constantNumber * sizeof(EConst));
+    code.constants.resize(_buffer.ReadInt());
     _buffer.Skip(4);
-    for (int i = 0; i < code.constantNumber; ++i) {
-        code.constants[i].key = ParseKey();
+    for (auto & constant : code.constants) {
+        constant.key = ParseKey();
     }
-    _buffer.Skip(code.constantNumber * 4);
-    for (int j = 0; j < code.constantNumber; ++j) {
+    _buffer.Skip(code.constants.size() * 4);
+    for (auto & constant : code.constants) {
         _buffer.Skip(4);
-        code.constants[j].property = _buffer.ReadShort();
-        code.constants[j].name = _buffer.ReadString();
-        code.constants[j].comment = _buffer.ReadString();
-        if (code.constants[j].key.type == KeyType_ImageRes || code.constants[j].key.type == KeyType_SoundRes) {
-            code.constants[j].data = _buffer.ReadFixedData();
+        constant.property = _buffer.ReadShort();
+        constant.name = _buffer.ReadString();
+        constant.comment = _buffer.ReadString();
+        if (constant.key.type == KeyType_ImageRes || constant.key.type == KeyType_SoundRes) {
+            constant.data = _buffer.ReadFixedData();
         } else {
             uint8_t  type = _buffer.ReadByte();
-            code.constants[j].value = ParseValue(_buffer, type);
+            constant.value = ParseValue(_buffer, type);
         }
-
     }
 
 }
 
-EVar *ECodeParser::ParseVariable(int &num) {
-    num = _buffer.ReadInt();
+void ECodeParser::ParseVariable(std::vector<EVar> &vars) {
+    vars.resize(_buffer.ReadInt());
     size_t offset = _buffer.ReadInt() + _buffer.pos;
-    EVar *var = num ? new EVar[num] : nullptr;
-    for (int k = 0; k < num; ++k) {
-        var[k].key = ParseKey();
+    for (auto & var : vars) {
+        var.key = ParseKey();
     }
-    _buffer.Skip(num * 4);
-    for (int i = 0; i < num; ++i) {
+    _buffer.Skip(vars.size() * 4);
+    for (auto & var : vars) {
         size_t next_offset = _buffer.ReadInt() + _buffer.pos;
-        var[i].type = _buffer.ReadInt();
-        var[i].property = _buffer.ReadShort();
-        var[i].count = _buffer.ReadByte();
-        var[i].dimension = var[i].count ? new int[var[i].count] : nullptr;
-        for (int j = 0; j < var[i].count; ++j) {
-            var[i].dimension[j] = _buffer.ReadInt();
+        var.type = _buffer.ReadInt();
+        var.property = _buffer.ReadShort();
+        var.dimension.resize(_buffer.ReadByte());
+        for (int & d : var.dimension) {
+            d = _buffer.ReadInt();
         }
-        var[i].name = _buffer.ReadString();
-        var[i].comment = _buffer.ReadString();
+        var.name = _buffer.ReadString();
+        var.comment = _buffer.ReadString();
         _buffer.pos = next_offset;
     }
     _buffer.pos = offset;
-    return var;
 }
 
 void ECodeParser::ParseSub() {
-    code.subNumber = _buffer.ReadInt() >> 3;
-    code.subs = new ESub[code.subNumber];
-    for (int i = 0; i < code.subNumber; ++i) {
-        code.subs[i].key = ParseKey();
-        for (int j = 0; j < code.moduleNumber; ++j) {
-            if (code.modules[j].has(code.subs[i].key)) {
-                code.subs[i].module = &code.modules[j];
+    code.subs.resize(_buffer.ReadInt() >> 3);
+    for (auto & sub : code.subs) {
+        sub.key = ParseKey();
+        for (auto & module : code.modules) {
+            if (module.has(sub.key)) {
+                sub.module = &module;
                 break;
             }
         }
     }
-    _buffer.Skip(code.subNumber * 4);
-    for (int j = 0; j < code.subNumber; ++j) {
+    _buffer.Skip(code.subs.size() * 4);
+    for (auto & sub : code.subs) {
         _buffer.Skip(4);
-        code.subs[j].property = _buffer.ReadInt();
-        code.subs[j].type = _buffer.ReadInt();
-        code.subs[j].name = _buffer.ReadFixedData();
-        code.subs[j].comment = _buffer.ReadFixedData();
-        code.subs[j].locals = ParseVariable(code.subs[j].localNumber);
-        code.subs[j].params = ParseVariable(code.subs[j].paramNumber);
-        for (auto &i : code.subs[j].code) {
+        sub.property = _buffer.ReadInt();
+        sub.type = _buffer.ReadInt();
+        sub.name = _buffer.ReadFixedData();
+        sub.comment = _buffer.ReadFixedData();
+        ParseVariable(sub.locals);
+        ParseVariable(sub.params);
+        for (auto &i : sub.code) {
             i = _buffer.ReadFixedData();
         }
     }
-
 }
 
 void ECodeParser::ParseDataStruct() {
-    code.structNumber = _buffer.ReadInt() >> 3;
-    code.structs = new EStruct[code.structNumber];
-    for (int i = 0; i < code.structNumber; ++i) {
-        code.structs[i].key = ParseKey();
+    code.structs.resize(_buffer.ReadInt() >> 3);
+    for (auto & i : code.structs) {
+        i.key = ParseKey();
     }
-    _buffer.Skip(code.structNumber * 4);
-    for (int j = 0; j < code.structNumber; ++j) {
-        code.structs[j].property = _buffer.ReadInt();
-        code.structs[j].name = _buffer.ReadFixedData();
-        std::cout << code.structs[j].name << std::endl;
-        code.structs[j].comment = _buffer.ReadFixedData();
-        code.structs[j].members = ParseVariable(code.structs[j].memberNumber);
+    _buffer.Skip(code.structs.size() * 4);
+    for (auto & j : code.structs) {
+        j.property = _buffer.ReadInt();
+        j.name = _buffer.ReadFixedData();
+        std::cout << j.name << std::endl;
+        j.comment = _buffer.ReadFixedData();
+        ParseVariable(j.members);
     }
 
 }
 
 void ECodeParser::ParseDll() {
-    code.dllNumber = _buffer.ReadInt() >> 3;
-    code.dlls = new EDllSub[code.dllNumber];
-    for (int i = 0; i < code.dllNumber; ++i) {
-        code.dlls[i].key = ParseKey();
+    code.dlls.resize(_buffer.ReadInt() >> 3);
+    for (auto &dll : code.dlls) {
+        dll.key = ParseKey();
     }
-    _buffer.Skip(code.dllNumber * 4);
-    for (int j = 0; j < code.dllNumber; ++j) {
-        code.dlls[j].property = _buffer.ReadInt();
-        code.dlls[j].type = _buffer.ReadInt();
-        code.dlls[j].name = _buffer.ReadFixedData();
-        code.dlls[j].comment = _buffer.ReadFixedData();
-        code.dlls[j].lib = _buffer.ReadFixedData();
-        code.dlls[j].func = _buffer.ReadFixedData();
-        code.dlls[j].params = ParseVariable(code.dlls[j].paramNumber);
+    _buffer.Skip(code.dlls.size() * 4);
+    for (auto & dll : code.dlls) {
+        dll.property = _buffer.ReadInt();
+        dll.type = _buffer.ReadInt();
+        dll.name = _buffer.ReadFixedData();
+        dll.comment = _buffer.ReadFixedData();
+        dll.lib = _buffer.ReadFixedData();
+        dll.func = _buffer.ReadFixedData();
+        ParseVariable(dll.params);
     }
 }
 
 void ECodeParser::ParseAST() {
-    for (int i = 0; i < code.subNumber; ++i) {
-        FileBuffer code_buf(code.subs[i].code[5].data, (size_t) code.subs[i].code[5].length);
-        code.subs[i].ast = ParseSubCode(code_buf);
-
+    for (auto & sub : code.subs) {
+        FileBuffer code_buf(sub.code[5].data, (size_t) sub.code[5].length);
+        sub.ast = ParseSubCode(code_buf);
     }
 }
 

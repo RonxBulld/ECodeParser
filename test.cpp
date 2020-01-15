@@ -53,15 +53,15 @@ void DumpVisitor::visit(ASTFunCall *node) {
         return;
     }
     if (node->key.type == KeyType_Sub) {
-        for (int i = 0; i < code->subNumber; ++i) {
-            if (code->subs[i].key.value == node->key.value) {
-                cout << code->subs[i].name;
+        for (auto & sub : code->subs) {
+            if (sub.key.value == node->key.value) {
+                cout << sub.name;
             }
         }
     } else if (node->key.type == KeyType_DllFunc) {
-        for (int i = 0; i < code->dllNumber; ++i) {
-            if (code->dlls[i].key.index == node->key.index) {
-                cout << code->dlls[i].name;
+        for (auto & dll : code->dlls) {
+            if (dll.key.index == node->key.index) {
+                cout << dll.name;
             }
         }
     }
@@ -109,9 +109,9 @@ void DumpVisitor::visit(ASTLiteral *node) {
 }
 
 void DumpVisitor::visit(ASTConstant *node) {
-    for (int i = 0; i < code->constantNumber; ++i) {
-        if (code->constants[i].key.value == node->key.value) {
-            cout << "#" << code->constants[i].name;
+    for (auto & constant : code->constants) {
+        if (constant.key.value == node->key.value) {
+            cout << "#" << constant.name;
         }
     }
 }
@@ -121,9 +121,9 @@ void DumpVisitor::visit(ASTLibConstant *node) {
 }
 
 void DumpVisitor::visit(ASTAddress *node) {
-    for (int i = 0; i < code->subNumber; ++i) {
-        if (code->subs[i].key.value == node->key.value) {
-            cout << "&" << code->subs[i].name;
+    for (auto & sub : code->subs) {
+        if (sub.key.value == node->key.value) {
+            cout << "&" << sub.name;
         }
     }
 }
@@ -139,11 +139,11 @@ void DumpVisitor::visit(ASTEnumConstant *node) {
 }
 
 void DumpVisitor::visit(ASTStructMember *node) {
-    for (int i = 0; i < code->structNumber; ++i) {
-        if (code->structs[i].key.value == node->key.value) {
-            for (int j = 0; j < code->structs[i].memberNumber; ++j) {
-                if (code->structs[i].members[j].key.value == node->member.value) {
-                    cout << "." << code->structs[i].members[j].name;
+    for (auto & i : code->structs) {
+        if (i.key.value == node->key.value) {
+            for (auto & member : i.members) {
+                if (member.key.value == node->member.value) {
+                    cout << "." << member.name;
                     break;
                 }
             }
@@ -155,24 +155,24 @@ void DumpVisitor::visit(ASTStructMember *node) {
 
 void DumpVisitor::visit(ASTVariable *node) {
     if (node->key.type == KeyType_LocalOrParam) {
-        for (int i = 0; i < current->localNumber; ++i) {
-            if (current->locals[i].key.value == node->key.value) {
-                cout << current->locals[i].name;
+        for (auto & local : current->locals) {
+            if (local.key.value == node->key.value) {
+                cout << local.name;
                 return;
             }
         }
-        for (int i = 0; i < current->paramNumber; ++i) {
-            if (current->params[i].key.value == node->key.value) {
-                cout << current->params[i].name;
+        for (auto & param : current->params) {
+            if (param.key.value == node->key.value) {
+                cout << param.name;
                 return;
             }
         }
 
     } else if (node->key.type == KeyType_ProgramVar) {
         EModule *module = current->module;
-        for (int i = 0; i < module->varNumber; ++i) {
-            if (module->vars[i].key.value == node->key.value) {
-                cout << module->vars[i].name;
+        for (auto & var : module->vars) {
+            if (var.key.value == node->key.value) {
+                cout << var.name;
                 return;
             }
         }

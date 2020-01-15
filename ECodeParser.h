@@ -10,7 +10,6 @@
         std::cout << str;\
     } while(0);
 #include <vector>
-#include <memory>
 #include <map>
 #include "FileBuffer.h"
 #include "tools.h"
@@ -45,32 +44,32 @@ struct EWindow {
     Key belong;
     FixedData name;
     FixedData comment;
-    int left{};
-    int top{};
-    int width{};
-    int height{};
+    int left = 0;
+    int top = 0;
+    int width = 0;
+    int height = 0;
     FixedData cursor;
     FixedData mark;
-    int visible{};
-    int bidden{};
-    int border{};
-    int bgSize{};
-    int bgColor{};
-    int maxBtn{};
-    int minBtn{};
-    int ctrlBtn{};
-    int position{};
-    int movable{};
-    int musicTimes{};
-    int enterFocus{};
-    int escClose{};
-    int f1Help{};
-    int helpMark{};
-    int showInTaskbar{};
-    int mov{}; // 随意移动
-    int shape{};
-    int alwaysTop{};
-    int alwaysActive{};
+    int visible = 0;
+    int bidden = 0;
+    int border = 0;
+    int bgSize = 0;
+    int bgColor = 0;
+    int maxBtn = 0;
+    int minBtn = 0;
+    int ctrlBtn = 0;
+    int position = 0;
+    int movable = 0;
+    int musicTimes = 0;
+    int enterFocus = 0;
+    int escClose = 0;
+    int f1Help = 0;
+    int helpMark = 0;
+    int showInTaskbar = 0;
+    int mov = 0; // 随意移动
+    int shape = 0;
+    int alwaysTop = 0;
+    int alwaysActive = 0;
     FixedData className;
     FixedData title;
     FixedData helpFileName;
@@ -87,34 +86,26 @@ struct ELibConst {
 
 struct EConst {
     Key key;
-    short property{};
+    short property = 0;
     FixedData name;
     FixedData comment;
-
-    union {
-        FixedData data;
-        Value value;
-    };
-
+    FixedData data;
+    Value value;
 };
 
 struct EVar {
     Key key;
-    int type{};
-    short property{};
+    int type = 0;
+    short property = 0;
     FixedData name;
     FixedData comment;
-    int *dimension{};
-    int count{};
-    void free() {
-        delete[]dimension;
-    }
+    std::vector<int> dimension;
 };
 
 struct ELibrary {
     FixedData path;
-    HMODULE hModule{};
-    PLIB_INFO info{};
+    HMODULE hModule = nullptr;
+    PLIB_INFO info = nullptr;
 };
 
 struct EModule {
@@ -122,60 +113,30 @@ struct EModule {
     Key base;
     FixedData name;
     FixedData comment;
-    int property{};
-    Key *include{};
-    int number{};
-
-    EVar *vars{};
-    int varNumber{};
-
+    int property = 0;
+    std::vector<Key> include;
+    std::vector<EVar> vars;
     inline bool has(Key test) {
-        for (int i = 0; i < number; ++i) {
-            if (test.value == include[i].value) {
+        for (auto & i : include) {
+            if (test.value == i.value) {
                 return true;
             }
         }
         return false;
     }
-
-    void free() {
-        for (int i = 0; i < varNumber; ++i) {
-            vars[i].free();
-        }
-        delete[]include;
-        delete[]vars;
-    }
 };
 
 struct ESub {
     Key key{};
-
     int property{};
     int type{};
     FixedData name;
     FixedData comment;
     FixedData code[6];
-
-    EVar *params{};
-    int paramNumber{};
-
-    EVar *locals{};
-    int localNumber{};
-
-    // 所属模块
-    EModule *module;
-
+    std::vector<EVar> params;
+    std::vector<EVar> locals;
+    EModule *module; // 所属模块
     ASTProgramPtr ast;
-    void free() {
-        for (int i = 0; i < paramNumber; ++i) {
-            params[i].free();
-        }
-        for (int i = 0; i < localNumber; ++i) {
-            locals[i].free();
-        }
-        delete[]params;
-        delete[]locals;
-    }
 };
 
 struct EStruct {
@@ -183,15 +144,7 @@ struct EStruct {
     int property{};
     FixedData name;
     FixedData comment;
-    EVar *members{};
-    int memberNumber{};
-    void free() {
-        for (int i = 0; i < memberNumber; ++i) {
-            members[i].free();
-        }
-        delete[]members;
-    }
-
+    std::vector<EVar> members;
 };
 
 struct EDllSub {
@@ -202,71 +155,25 @@ struct EDllSub {
     FixedData comment;
     FixedData lib;
     FixedData func;
-    EVar *params{};
-    int paramNumber{};
-    void free() {
-        for (int i = 0; i < paramNumber; ++i) {
-            params[i].free();
-        }
-        delete[]params;
-    }
-
+    std::vector<EVar> params;
 };
 
 struct ECode {
     uint8_t *code{};
-    // 源码信息
-    BasicInfo info;
-    //窗口
-    EWindow *windows{};
-    int windowNumber{};
-    // 常量
-    EConst *constants{};
-    int constantNumber{};
-    // 支持库
-    ELibrary *libraries{};
-    int libraryNumber{};
-    // 程序集/类
-    EModule *modules{};
-    int moduleNumber{};
-    // 所有子程序
-    ESub *subs{};
-    int subNumber{};
-    // 全局变量
-    EVar *globals{};
-    int globalNumber{};
-    // 自定义数据类型
-    EStruct *structs{};
-    int structNumber{};
-    // dll
-    EDllSub *dlls{};
-    int dllNumber{};
-
+    BasicInfo info; // 源码信息
+    std::vector<EWindow> windows; //窗口
+    std::vector<EConst> constants; //常量
+    std::vector<ELibrary> libraries; //支持库
+    std::vector<EModule> modules; // 程序集/类
+    std::vector<ESub> subs; // 所有子程序
+    std::vector<EVar> globals; // 全局变量
+    std::vector<EStruct> structs; // 自定义数据类型
+    std::vector<EDllSub> dlls; // dll
     void free() {
         ::free(code);
-        for (int i = 0; i < libraryNumber; ++i) {
-            FreeLibrary(libraries[i].hModule);
+        for (auto & librarie : libraries) {
+            FreeLibrary(librarie.hModule);
         }
-        for (int i = 0; i < moduleNumber; ++i) {
-            modules[i].free();
-        }
-        for (int i = 0; i < subNumber; ++i) {
-            subs[i].free();
-        }
-        for (int i = 0; i < globalNumber; ++i) {
-            globals[i].free();
-        }
-        for (int i = 0; i < structNumber; ++i) {
-            structs[i].free();
-        }
-        delete[] windows;
-        delete[] constants;
-        delete[] libraries;
-        delete[] modules;
-        delete[] subs;
-        delete[] globals;
-        delete[] structs;
-        delete[] dlls;
     }
 };
 
@@ -309,7 +216,7 @@ private:
     void ParseWindow();
     void ParseResourceSegement();
     void ParseConstant();
-    EVar *ParseVariable(int &num);
+    void ParseVariable(std::vector<EVar> &vars);
     void ParseSub();
     void ParseDataStruct();
     void ParseDll();
